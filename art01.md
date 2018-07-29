@@ -1,5 +1,7 @@
-# Keywords
-governance, platform, service, azure, application, teams, shared
+# Azure Shared Platform and Application Service lifecycle management (draft)
+
+**Keywords**: *governance, platform, service, azure, application, teams, shared*
+
 
 # Outline
 
@@ -61,11 +63,35 @@ If I have an aPaaS service and in this case I am not aware of underlying (virtua
 Also, Operations wise, it is very debatable if there is any operational efficiency by hosting multiple applications within single aPaaS service.
 Let's use Azure App Service for an example. App Service must use App Service Plan. Now if you make a parallel with pre PaaS era, you can say that App Service Plan is the same as Web Server farm and App Service is just an Web Site (which is actually not far from the truth). There is very little or no resource isolation between App Services hosted within the same App Service Plan. App Service plan has a "farm" of servers - virtual machine scale set. Scaling-out or up of the farm affects all App Services hosted within the App Service Plan.
 There is very little Operations team has to really do on a regular bases in order to operate and maintain the App Service and App Service Plan. Apart form monitoring and having alerting configured most of not all of changes required to be performed within App Service is requested by Application team. Changes that are required across all of the App Services which may be originated by Operations team should be automated anyway - so applying the change on single App Service or on all App Services deployed by the organization is not (or it should not be) any more time wise expensive.
-So I would argue that cost efficiency in case of aPaaS should be a reason to use aPaaS as a shared platform.
+So I would argue that cost efficiency in the case of aPaaS should be a reason to always use aPaaS as a shared platform for multiple Applications.
 
 # Line between Infrastructure or Platform service and Application Service
 
-# References 
-    - (governance book about services, etc)
-    - Azure ARM template documents
+Given we deploy Application components onto a platform service where is the line between what is platform and what are application service owned components deployed to the platform?
+This is not an article purely about API Management platform but this one is really a good example to describe this topic.
+In order to publish an API, Application development team obviously needs to design it first and define an API contract typically described by using OpenAPI (Swagger) or some other API contract description standard (e.g. RAML, WADL, etc.). This API or sometimes also seen as a proxy of backend API belongs to an Application. Someone can argue that API itself could be an Application and this could be true in some cases but that doesn't change to point that an API either belong to an Application or it is in some cases Application itself and as such it is developed by Application development team.
+Dilemma I saw often between Infrastructure / Platform teams and Application teams is, who should own the API given that an API has to be configured within the API Management platform? Infrastructure team would argue that since the platform requires specialist knowledge it is the best if specialised team takes ownership of configuring and deploying all of the APIs. It is certainly an option that will work but is it really the most scalable and does it provide desired Application development team independence I talked about earlier? Specialist knowledge - every new technology we introduce requires new knowledge. Complexity of our solutions is just growing and that is simply reality Application development team should be able to cope with. "Full stack developer" is a new norm and yes, API management or any other platform used to accelerate development simply has to be mastered by Application development team.
+Alternative approach to the one where platform team takes responsibility to "configure" APIs on behalf / request of Application Development teams is to allow Application teams to use the platform and "develop" all aspects of an API on their own and simply use standard Continuous Delivery pipeline to deploy and release this API as part of their Application. Depending on the shared Platform service type, artefacts belonging to the Application are more or less isolated from artefacts of all other Applications or of the platform itself. Specifically in case Azure API Management platform for instance, definition of the platform itself (configuration options) and API definitions are all part of the same Resource Management configuration. This may change in the future and it may be also different for some other platform service but the concept is the same - there are configurations of the  platform itself and there are configurations specific to Applications which are leveraging the platform and we need to be able to ensure that these can be managed independently within their own lifecycles and by providing isolation between these logical boundaries.
+
+
+# Shared Platform and Application Service lifecycle management for Azure services
+
+How to ensure independent platform and application lifecycles while keeping also high level of isolation between shared platform service and multiple Applications which are using the Platform?
+Let's use different potentially shared platform service as example - Azure Service Bus as an messaging shared platform service.
+We have three teams, two Application development teams and one shared platform service team. Each team owns certain components (or artefacts) which are physically part of the Azure Service Bus PaaS.
+Both Application teams have a messaging topic each. They should define data structure of the messages in the topic, purpose of the Topic, who can subscribe to the topic, Topic behaviour like message retention period, etc
+Shared platform service team which owns shared Azure Service Bus instance owns the instance itself and governs to some extends it's use. Specifically, they are managing permissions for all of the environments (dev, test, production) for the logical instance, they are designing the platform based on required system quality attributes specified by Application teams (e.g. availability, etc), design and implementation of operational features like monitoring and alerting, etc
+
+[use concrete ARM teamplate parts which specify all different aspects]
+
+
+
+# Reviewers
+...
+
+
+# References
+
+- (governance book about services, etc)
+- Azure ARM template documents
 
