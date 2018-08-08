@@ -40,10 +40,9 @@ The larger the organization, the more separations exist within such team as well
 Typical information system for such organization consist of over hundred of applications. Infrastructure and operating cost is usually not insignificant and organizations are typically measuring Total Cost of Ownership (TCO) per application and trying to reduce it where possible. This often leads to shared infrastructure platforms. Usually such concepts are trade-off between increase the density of Applications per Infrastructure service which reduces the cost but on the other hand centralization of such infrastructure services is usually impacting Application lifecycle independence.
 Cost is not the only reason for such shared or centralized infrastructure platforms. Another reason is importance of centralizing the information about deployed components or artefacts. 
 
-This article describes one of possible ways how both Application and Infrastructure teams could organize and manage ownership of Microsoft Azure services (resources) used by both Application services and centralized or shared Infrastructure services. 
-How to decide which infrastructure services should be shared is out of scope from this article.
+This article describes one of possible ways how both Application and Infrastructure teams could organize and manage ownership of Microsoft Azure services (resources) used by both Application services and centralized or shared Infrastructure services.
 
-# Shared Infrastructure and Platform Services
+# Shared Infrastructure or Platform Services
 
 I'll try to introduce concept of shared infrastructure or platform services and why and when it makes sense - please skip this section if you feel that there is nothing new you need to read about this topic.
 
@@ -71,18 +70,55 @@ Given we deploy Application components onto a platform service where is the line
 This is not an article purely about API Management platform but this one is really a good example to describe this topic.
 In order to publish an API, Application development team obviously needs to design it first and define an API contract typically described by using OpenAPI (Swagger) or some other API contract description standard (e.g. RAML, WADL, etc.). This API or sometimes also seen as a proxy of backend API belongs to an Application. Someone can argue that API itself could be an Application and this could be true in some cases but that doesn't change to point that an API either belong to an Application or it is in some cases Application itself and as such it is developed by Application development team.
 Dilemma I saw often between Infrastructure / Platform teams and Application teams is, who should own the API given that an API has to be configured within the API Management platform? Infrastructure team would argue that since the platform requires specialist knowledge it is the best if specialised team takes ownership of configuring and deploying all of the APIs. It is certainly an option that will work but is it really the most scalable and does it provide desired Application development team independence I talked about earlier? Specialist knowledge - every new technology we introduce requires new knowledge. Complexity of our solutions is just growing and that is simply reality Application development team should be able to cope with. "Full stack developer" is a new norm and yes, API management or any other platform used to accelerate development simply has to be mastered by Application development team.
-Alternative approach to the one where platform team takes responsibility to "configure" APIs on behalf / request of Application Development teams is to allow Application teams to use the platform and "develop" all aspects of an API on their own and simply use standard Continuous Delivery pipeline to deploy and release this API as part of their Application. Depending on the shared Platform service type, artefacts belonging to the Application are more or less isolated from artefacts of all other Applications or of the platform itself. Specifically in case Azure API Management platform for instance, definition of the platform itself (configuration options) and API definitions are all part of the same Resource Management configuration. This may change in the future and it may be also different for some other platform service but the concept is the same - there are configurations of the  platform itself and there are configurations specific to Applications which are leveraging the platform and we need to be able to ensure that these can be managed independently within their own lifecycles and by providing isolation between these logical boundaries.
+Alternative approach to the one where platform team takes responsibility to "configure" APIs on behalf / request of Application Development teams is to allow Application teams to use the platform and "develop" all aspects of an API on their own and simply use standard Continuous Delivery pipeline to deploy and release this API as part of their Application. Depending on the shared Platform service type, artefacts belonging to the Application are more or less isolated from other Application artefacts or from the platform itself. Specifically in case Azure API Management platform for instance, definition of the platform (configuration options) and API definitions are all part of the same Resource Management configuration. This may change in the future and it may be also different for some other platform services. There are platform configurations and there are configurations specific to Applications which are leveraging the platform and we should to be able to ensure that these can be managed independently within their own lifecycles and by providing isolation between these logical boundaries.
 
+# Why separated lifecycle for centralized platform and applications is usually needed?
 
 # Shared Platform and Application Service lifecycle management for Azure services
 
 How to ensure independent platform and application lifecycles while keeping also high level of isolation between shared platform service and multiple Applications which are using the Platform?
-Let's use different potentially shared platform service as example - Azure Service Bus as an messaging shared platform service.
-We have three teams, two Application development teams and one shared platform service team. Each team owns certain components (or artefacts) which are physically part of the Azure Service Bus PaaS.
-Both Application teams have a messaging topic each. They should define data structure of the messages in the topic, purpose of the Topic, who can subscribe to the topic, Topic behaviour like message retention period, etc
-Shared platform service team which owns shared Azure Service Bus instance owns the instance itself and governs to some extends it's use. Specifically, they are managing permissions for all of the environments (dev, test, production) for the logical instance, they are designing the platform based on required system quality attributes specified by Application teams (e.g. availability, etc), design and implementation of operational features like monitoring and alerting, etc
 
-[use concrete ARM teamplate parts which specify all different aspects]
+Let's use different potentially shared platform service as example - Azure Service Bus as a messaging shared platform service.
+In this scenario we may have three teams, two Application development teams and one shared platform service team. Each team owns certain components (or artefacts) which are physically part of the Azure Service Bus PaaS.
+Both Application teams have a messaging topic each. They should define data structure of the messages in the topic, purpose of the Topic, external subscriber application access control for the topic, Topic behaviour like message retention period, etc
+Shared platform service team which owns shared Azure Service Bus owns the instance itself and governs it's use. Specifically, they could be managing permissions for all of the environments (dev, test, production) for the logical instance, they are designing the platform based on required system quality attributes specified by Application teams (e.g. availability, etc), design and implementation of operational features like monitoring and alerting, etc
+Therefore three different teams have different concerns, responsibilities and in many cases independent delivery timelines. 
+In order to ensure team and application or service lifecycle independence all three teams should separate their Software Configuration Management including Continuous Delivery pipelines. How that concretely translate to the Azure Service Bus example?
+
+Here is the breakdown of all artefacts for each team.
+
+Service Bus centralized platform owner team:
+- Shared platform definition configuration
+    - Definition of the platform topology (e.g. multi-region deployment, service endpoint definition, etc)
+    - ...
+
+Application Team 1:
+- "Topic 1" definition (Topic name, retention, access keys, partitioning scheme, etc)
+- "Topic 1" subscription A definition (message filter definition, subscription access keys)
+- Message A schema definition
+
+Application Team 2:
+- "Topic 1" definition (Topic name, retention, access keys, partitioning scheme, etc)
+- "Topic 1" subscription A definition (message filter definition, subscription access keys)
+- Message B schema definition
+
+Here are several examples what separate ALM for each team also means and which tools and processes are separated:
+- Separate Source Control repository
+- Separate Continuous Delivery Pipeline
+    - Build
+    - Test Automation
+    - Deployment Automation 
+
+All team will have shared:
+- Platform environments (Dev, Test, Production). Teams may chose to own their own Sandbox environment and be completely independent at that stage with freedom to experiment with different platform setups but sooner the teams start integrating their components / artefacts within the shared platform environment, the more chances teams will discover integration issues early in the process.
+
+Should common System Testing for all three teams should be considered? Deploying Application 1 components (artefacts listed above) to the shared platform would ultimately mean that system testing is performed for both Application 1 and the platform. Unless two application teams have application dependencies there should be no need for these to participate in the common system test since platform service should provide enough runtime time isolation to prevent applications interfering with each other.
+
+How we achieve independent Application component (artefact) deployment given that what we consider separated application component ultimately ends up incorporated into single Azure Resource - Azure Service Bus resource definition in this example?
+Using Linked Resource templates (or resource dependencies or nested resources) is one the possible solutions. Definition of the component as Azure Resource as described in the breakdown above could be developed and maintained and deployed separately by each application team. 
+
+
+[use ARM template example which specify all different aspects]
 
 
 
@@ -95,3 +131,17 @@ Shared platform service team which owns shared Azure Service Bus instance owns t
 - (governance book about services, etc)
 - Azure ARM template documents
 
+Number of documents about creating Azure Resource Manager templates
+[https://docs.microsoft.com/en-gb/azure/azure-resource-manager/](https://docs.microsoft.com/en-gb/azure/azure-resource-manager/)
+
+Azure Policy helps you manage and prevent IT issues with policy definitions that enforce rules and effects for your resources. Use of Policies may be needed to enforce programmatically certain restrictions related to usage limits, allowed Azure technologies, etc
+[https://docs.microsoft.com/en-gb/azure/azure-policy/](https://docs.microsoft.com/en-gb/azure/azure-policy/)
+
+This article provides examples of how an enterprise can implement the recommendations for an Azure enterprise scaffold.
+[https://docs.microsoft.com/en-us/azure/architecture/cloud-adoption-guide/subscription-governance-examples](https://docs.microsoft.com/en-us/azure/architecture/cloud-adoption-guide/subscription-governance-examples)
+
+General Azure as a Virtual Data Center guidance document. Broad list of topic including some relevant content related to resource isolation and separation of responsibilities.
+[https://azure.microsoft.com/mediahandler/files/resourcefiles/1ad643b8-73f7-43f6-b05a-8e160168f9df/Azure_Virtual_Datacenter.pdf](https://azure.microsoft.com/mediahandler/files/resourcefiles/1ad643b8-73f7-43f6-b05a-8e160168f9df/Azure_Virtual_Datacenter.pdf)
+
+Azure cloud governance refers to the decision-making processes, criteria, and policies involved in the planning, architecture, acquisition, deployment, operation, and management of cloud computing. Azure cloud governance provides an integrated audit and consulting approach for reviewing and advising organizations on their usage of the Azure platform
+[https://docs.microsoft.com/en-us/azure/security/governance-in-azure](https://docs.microsoft.com/en-us/azure/security/governance-in-azure)
